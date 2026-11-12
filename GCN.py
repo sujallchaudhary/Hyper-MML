@@ -8,7 +8,6 @@ from torch.nn.parameter import Parameter
 import numpy as np, itertools, random, copy, math
 import math
 import scipy.sparse as sp
-import ipdb
  
 class GCNLayer1(nn.Module):
     def __init__(self, in_feats, out_feats, use_topic=False, new_graph=True):

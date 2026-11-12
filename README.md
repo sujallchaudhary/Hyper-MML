@@ -61,6 +61,34 @@ By following these steps, you'll have a properly configured environment with all
 
 
 
+## Soft-computing extensions (added for SC lab)
+
+All options are off by default, so the original Hyper-MML behaviour is unchanged. Code: `softcomputing.py`.
+
+| Technique | Flag | What it does |
+|---|---|---|
+| Fuzzy-rough feature selection (rough sets + fuzzy sets) | `--rs_select quickreduct` | Finds a reduct per modality (EEG/audio/video) using the fuzzy-rough dependency degree; fitted on the training split only |
+| Rough reduct via Genetic Algorithm (optimisation) | `--rs_select ga` | GA search maximising dependency degree while minimising reduct size, warm-started from QuickReduct |
+| Rough boundary-region sample weighting | `--rs_weight` | Samples with low positive-region membership (ambiguous / noisy labels) get a smaller loss weight |
+| Fuzzy TSK modality-reliability gate | `--fuzzy_gate` | 9-rule Takagi-Sugeno fuzzy system (certainty x agreement -> trust) re-weights each modality per sample before hypergraph fusion |
+| Particle Swarm Optimisation | `tune_pso.py` / `modal_app.py::pso` | Tunes lr, l2, dropout, #hypergraph layers, rough-set sigma / reduct size, aux weight against **validation** F1 |
+
+Use `--valid_frac 0.2` for model selection on a validation split. (The original script reports the best
+test-set F1 over epochs; `RESULT {...}` now also prints test F1 at the best-validation epoch.)
+
+Run on Modal: see the header of `modal_app.py` (`modal run modal_app.py::smoke`).
+`make_synthetic.py` creates synthetic EAV-format features for pipeline checks only.
+
+### Running on the open AFFEC dataset (no Baidu needed)
+
+AFFEC (Zenodo 14794876, CC-BY) is openly downloadable. `preprocess/build_affec_features.py` builds Hyper-MML-format
+features from the raw BIDS files (EEG band power, GSR stats, gaze/pupil stats; felt-valence -> 3 classes; trial-level
+train/test split). These are hand-crafted features, **not** the paper's pretrained embeddings, so numbers are not
+comparable with the paper.
+
+    python -I preprocess/build_affec_features.py RAW_ROOT OUT_ROOT acl
+    HYPERMML_ROOT=OUT_ROOT python train.py --Dataset AFFEC --subject 1 --valid_frac 0.2 --rs_select quickreduct
+
 ## Citation
 
 If you find our work helpful to your research, we would appreciate a citation:

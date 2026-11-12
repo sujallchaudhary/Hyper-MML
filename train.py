@@ -8,11 +8,12 @@ from torch.utils.data import DataLoader
 from torch.utils.data.sampler import SubsetRandomSampler, WeightedRandomSampler
 from datasets import EAVDataset, AFFECDataset
 from model import MaskedNLLLoss, LSTMModel, GRUModel, Model, MaskedMSELoss, FocalLoss
+from softcomputing import FuzzyRoughSelector, rough_sample_weights, weighted_nll
+import json
 from sklearn.metrics import f1_score, confusion_matrix, accuracy_score, classification_report, precision_recall_fscore_support
 import pandas as pd
 import pickle as pk
 import datetime
-import ipdb
 
 print("import OK!")
 
@@ -35,60 +36,70 @@ def get_train_valid_sampler(trainset, valid=0, dataset='EAV'):
     split = int(valid*size)
     return SubsetRandomSampler(idx[split:]), SubsetRandomSampler(idx[:split])
 
-def get_EAV_loaders(batch_size=16, valid=0, num_workers=0, pin_memory=False, sub=1):
-    trainset = EAVDataset(train=True, subject = sub)
-    train_sampler, valid_sampler = get_train_valid_sampler(trainset, valid)
+def stratified_split(labels, valid_frac, seed=seed, groups=None):
+    """Random class-stratified train/validation split (validation never touches the test set).
+    If `groups` is given (e.g. trial ids of time windows) whole groups are kept together."""
+    rng = np.random.RandomState(seed)
+    labels = np.asarray(labels).astype(int).ravel()
+    if groups is not None:
+        ug, first = np.unique(groups, return_index=True)
+        _, gva = stratified_split(labels[first], valid_frac, seed)
+        val = np.where(np.isin(groups, ug[gva]))[0]
+        return np.setdiff1d(np.arange(len(labels)), val), val
+    val = []
+    for c in np.unique(labels):
+        idx = rng.permutation(np.where(labels == c)[0])
+        val.extend(idx[:int(round(valid_frac*len(idx)))])
+    val = np.array(sorted(val), dtype=int)
+    tr = np.setdiff1d(np.arange(len(labels)), val)
+    return tr, val
 
-    train_loader = DataLoader(trainset,
-                              batch_size=batch_size,
-                              collate_fn=trainset.collate_fn,
-                              num_workers=num_workers,
-                              pin_memory=pin_memory, worker_init_fn=_init_fn)
-
-    valid_loader = DataLoader(trainset,
-                              batch_size=batch_size,
-                              sampler=valid_sampler,
-                              collate_fn=trainset.collate_fn,
-                              num_workers=num_workers,
-                              pin_memory=pin_memory)
-
-    testset = EAVDataset(train=False, subject = sub)
-    test_loader = DataLoader(testset,
-                             batch_size=batch_size,
-                             collate_fn=testset.collate_fn,
-                             num_workers=num_workers,
-                             pin_memory=pin_memory, worker_init_fn=_init_fn)
-
+def _make_loaders(DS, batch_size, valid, num_workers, pin_memory, sub):
+    trainset = DS(train=True, subject=sub)
+    testset = DS(train=False, subject=sub)
+    if valid > 0:
+        tr_idx, va_idx = stratified_split(trainset.labels(True), valid, groups=trainset.groups(True))
+        train_sampler, valid_sampler = SubsetRandomSampler(tr_idx), SubsetRandomSampler(va_idx)
+    else:  # original behaviour: train on everything, empty validation loader
+        tr_idx, va_idx = np.arange(len(trainset)), np.array([], dtype=int)
+        train_sampler, valid_sampler = None, SubsetRandomSampler([])
+    trainset.fit_idx = tr_idx  # samples that soft-computing steps are allowed to fit on
+    train_loader = DataLoader(trainset, batch_size=batch_size, sampler=train_sampler, collate_fn=trainset.collate_fn,
+                              num_workers=num_workers, pin_memory=pin_memory, worker_init_fn=_init_fn)
+    valid_loader = DataLoader(trainset, batch_size=batch_size, sampler=valid_sampler, collate_fn=trainset.collate_fn,
+                              num_workers=num_workers, pin_memory=pin_memory)
+    test_loader = DataLoader(testset, batch_size=batch_size, collate_fn=testset.collate_fn,
+                             num_workers=num_workers, pin_memory=pin_memory, worker_init_fn=_init_fn)
     return train_loader, valid_loader, test_loader
+
+def get_EAV_loaders(batch_size=16, valid=0, num_workers=0, pin_memory=False, sub=1):
+    return _make_loaders(EAVDataset, batch_size, valid, num_workers, pin_memory, sub)
 
 def get_AFFEC_loaders(batch_size=16, valid=0, num_workers=0, pin_memory=False, sub='acl'):
-    trainset = AFFECDataset(train=True, subject = sub)
-    train_sampler, valid_sampler = get_train_valid_sampler(trainset, valid)
-
-    train_loader = DataLoader(trainset,
-                              batch_size=batch_size,
-                              collate_fn=trainset.collate_fn,
-                              num_workers=num_workers,
-                              pin_memory=pin_memory, worker_init_fn=_init_fn)
-
-    valid_loader = DataLoader(trainset,
-                              batch_size=batch_size,
-                              sampler=valid_sampler,
-                              collate_fn=trainset.collate_fn,
-                              num_workers=num_workers,
-                              pin_memory=pin_memory)
-
-    testset = AFFECDataset(train=False, subject = sub)
-    test_loader = DataLoader(testset,
-                             batch_size=batch_size,
-                             collate_fn=testset.collate_fn,
-                             num_workers=num_workers,
-                             pin_memory=pin_memory, worker_init_fn=_init_fn)
-
-    return train_loader, valid_loader, test_loader
+    return _make_loaders(AFFECDataset, batch_size, valid, num_workers, pin_memory, sub)
 
 
-def train_or_eval_graph_model(model, loss_function, dataloader, epoch, cuda, modals, optimizer=None, train=False, dataset='EAV'):
+def apply_rough_selection(trainset, testset, method, sigma, max_features, pool):
+    """Fuzzy-rough reduct per modality, fitted on the training split only, applied to train+test.
+    Returns (selectors, per-sample loss weights from the positive-region membership)."""
+    fit = trainset.fit_idx
+    y = trainset.labels(True)[fit]
+    selectors, mus = {}, []
+    for mod in ('eeg', 'aud', 'vis'):
+        X = trainset.mod_array(mod, True)[fit]
+        sel = FuzzyRoughSelector(sigma=sigma, pool_size=pool, max_features=max_features).fit(X, y, method=method, verbose=False)
+        print('[rough-set] %s: %d -> %d features (gamma=%.3f)' % (mod, X.shape[1], len(sel.selected_), sel.gamma_))
+        mus.append(sel.positive_region_membership(X, y))
+        trainset.select_features(mod, sel.selected_)
+        testset.select_features(mod, sel.selected_)
+        selectors[mod] = sel
+    w = np.ones(len(trainset), dtype=np.float32)
+    w[fit] = rough_sample_weights(np.mean(mus, axis=0), floor=args.rs_floor)
+    return selectors, w
+
+GATE_LOG = {'w': [], 'y': []}  # fuzzy-gate weights collected during evaluation
+
+def train_or_eval_graph_model(model, loss_function, dataloader, epoch, cuda, modals, optimizer=None, train=False, dataset='EAV', sample_weights=None):
     losses, preds, labels = [], [], []  
     scores, vids = [], []
 
@@ -103,6 +114,8 @@ def train_or_eval_graph_model(model, loss_function, dataloader, epoch, cuda, mod
     else:
         model.eval()
 
+    if not train:
+        GATE_LOG['w'], GATE_LOG['y'] = [], []
     seed_everything() 
     for data in dataloader:
         if train:
@@ -161,7 +174,17 @@ def train_or_eval_graph_model(model, loss_function, dataloader, epoch, cuda, mod
         label = torch.cat([label[j][:lengths[j]] for j in range(len(label))]) 
         label = label.long()
 
-        loss = loss_function(log_prob, label)  
+        sw = torch.as_tensor(sample_weights[np.array(data[-1])]) if (train and sample_weights is not None) else None
+        cw = getattr(loss_function, 'weight', None)
+        if sw is not None:  # rough-set boundary samples contribute less
+            loss = weighted_nll(log_prob, label, cw, sw)
+        else:
+            loss = loss_function(log_prob, label)
+        if getattr(model, 'fuzzy_gate', None) is not None:
+            if train:  # deep supervision of the modality-specific heads that feed the fuzzy gate
+                loss = loss + args.aux_weight * model.fuzzy_gate.aux_loss(label, lambda lp, l: weighted_nll(lp, l, cw, sw))
+            else:
+                GATE_LOG['w'].append(model.fuzzy_gate.last_weights.cpu().numpy()); GATE_LOG['y'].append(label.cpu().numpy())
         preds.append(torch.argmax(log_prob, 1).cpu().numpy()) 
         labels.append(label.cpu().numpy()) 
         losses.append(loss.item()) 
@@ -268,7 +291,19 @@ if __name__ == '__main__':
 
     parser.add_argument('--subject', type=int, default=1, help='subject id')  
 
+    # ---- soft-computing options (all off by default => original Hyper-MML behaviour) ----
+    parser.add_argument('--rs_select', default='none', choices=['none', 'quickreduct', 'ga'], help='fuzzy-rough feature reduction (QuickReduct or GA search)')
+    parser.add_argument('--rs_sigma', type=float, default=3.0, help='width of fuzzy similarity relation (in std)')
+    parser.add_argument('--rs_max_features', type=int, default=48, help='max reduct size per modality')
+    parser.add_argument('--rs_pool', type=int, default=200, help='candidate pool size after ANOVA pre-filter')
+    parser.add_argument('--rs_weight', action='store_true', default=False, help='down-weight rough boundary-region samples in the loss')
+    parser.add_argument('--rs_floor', type=float, default=0.3, help='minimum loss weight of boundary samples')
+    parser.add_argument('--fuzzy_gate', action='store_true', default=False, help='fuzzy TSK modality-reliability gate before hypergraph fusion')
+    parser.add_argument('--aux_weight', type=float, default=0.3, help='weight of auxiliary modality-head loss for the fuzzy gate')
+    parser.add_argument('--seed', type=int, default=1475, help='random seed (model init / sampling)')
+    parser.add_argument('--valid_frac', type=float, default=0.0, help='fraction of train set held out for validation (needed for honest model selection / tuning)')
     args = parser.parse_args() 
+    seed_everything.__defaults__ = (args.seed,)  # seed_everything() is called without arguments throughout
     today = datetime.datetime.now() 
     subject = args.subject
     print(args) 
@@ -298,9 +333,29 @@ if __name__ == '__main__':
     batch_size = args.batch_size  
     modals = args.modals  
 
-    D_audio = 1582 if args.Dataset=='EAV' else 31
-    D_visual = 1024 if args.Dataset=='EAV' else 44
-    D_eeg = 1024 
+    # ---- data loaders (built before the model so that feature selection can change input dims) ----
+    print(f'-------------subject{subject}------------')
+    if args.Dataset == 'EAV':
+        train_loader, valid_loader, test_loader = get_EAV_loaders(valid=args.valid_frac, batch_size=batch_size,
+                                                                  num_workers=0, sub=subject)
+    elif args.Dataset == 'AFFEC':
+        train_loader, valid_loader, test_loader = get_AFFEC_loaders(valid=args.valid_frac, batch_size=batch_size,
+                                                                    num_workers=0, sub=subject)
+    else:
+        raise ValueError("There is no such dataset")
+
+    # input dimensions are read from the data (EAV: 1582/1024/1024; AFFEC pretrained features: 31/44/1024)
+    _ds = train_loader.dataset
+    D_audio, D_visual, D_eeg = (_ds.mod_array(m, True).shape[1] for m in ('aud', 'vis', 'eeg'))
+    train_sample_w = None
+    if args.rs_select != 'none':  # rough-set / fuzzy-rough feature reduction
+        selectors, w_all = apply_rough_selection(train_loader.dataset, test_loader.dataset, args.rs_select,
+                                                 args.rs_sigma, args.rs_max_features, args.rs_pool)
+        D_eeg, D_audio, D_visual = len(selectors['eeg'].selected_), len(selectors['aud'].selected_), len(selectors['vis'].selected_)
+        if args.rs_weight:
+            train_sample_w = w_all
+    elif args.rs_weight:
+        raise SystemExit('--rs_weight needs --rs_select quickreduct|ga')
 
     if args.multi_modal:   
         if args.mm_fusion_mthd=='concat':
@@ -315,7 +370,7 @@ if __name__ == '__main__':
             else:
                 raise NotImplementedError
         else:
-            D_m = 1024 
+            D_m = D_eeg
     else:
         if modals == 'a':
             D_m = D_audio
@@ -368,7 +423,8 @@ if __name__ == '__main__':
                                  use_modal=args.use_modal,
                                  norm = args.norm,
                                  num_L = args.num_L,
-                                 num_K = args.num_K)
+                                 num_K = args.num_K,
+                                 fuzzy_gate = args.fuzzy_gate)
 
         print ('Graph NN with', args.base_model, 'as base model.')
         name = 'Graph'
@@ -425,21 +481,9 @@ if __name__ == '__main__':
 
     lr = args.lr
 
-    if args.Dataset == 'EAV':
-        print(f'-------------subject{subject}------------')
-        train_loader, valid_loader, test_loader = get_EAV_loaders(valid=0.0,
-                                                                      batch_size=batch_size,
-                                                                      num_workers=2, sub=subject)
-    elif args.Dataset == 'AFFEC':
-        print(f'-------------subject{subject}------------')
-        train_loader, valid_loader, test_loader = get_AFFEC_loaders(valid=0.0,
-                                                                      batch_size=batch_size,
-                                                                      num_workers=0, sub=subject)
-    else:
-        print("There is no such dataset")
-
     best_fscore, best_loss, best_label, best_pred, best_mask = None, None, None, None, None  
     all_fscore, all_acc, all_loss = [], [], [] 
+    best_valid, test_at_best_valid = None, (float('nan'), float('nan'), -1)
 
     if args.testing: 
         state = torch.load("best_model.pth.tar")
@@ -453,10 +497,13 @@ if __name__ == '__main__':
         start_time = time.time()  
 
         if args.graph_model: 
-            train_loss, train_acc, _, _, train_fscore, _, _, _, _, _ = train_or_eval_graph_model(model, loss_function, train_loader, e, cuda, args.modals, optimizer, True, dataset=args.Dataset)
+            train_loss, train_acc, _, _, train_fscore, _, _, _, _, _ = train_or_eval_graph_model(model, loss_function, train_loader, e, cuda, args.modals, optimizer, True, dataset=args.Dataset, sample_weights=train_sample_w)
             valid_loss, valid_acc, _, _, valid_fscore, _, _, _, _, _ = train_or_eval_graph_model(model, loss_function, valid_loader, e, cuda, args.modals, dataset=args.Dataset)
             test_loss, test_acc, test_label, test_pred, test_fscore, _, _, _, _, _ = train_or_eval_graph_model(model, loss_function, test_loader, e, cuda, args.modals, dataset=args.Dataset)
             all_fscore.append(test_fscore) 
+            all_acc.append(test_acc)
+            if args.valid_frac > 0 and (best_valid is None or valid_fscore > best_valid):  # honest model selection
+                best_valid, test_at_best_valid = valid_fscore, (test_fscore, test_acc, e + 1)
 
 
         else:
@@ -485,6 +532,20 @@ if __name__ == '__main__':
 
     if args.tensorboard:
         writer.close()
+
+    if args.fuzzy_gate and GATE_LOG['w']:
+        gw, gy = np.concatenate(GATE_LOG['w']), np.concatenate(GATE_LOG['y'])
+        print('Fuzzy gate - mean modality trust on test set (EEG / AUDIO / VIDEO):')
+        print('  overall:', np.round(gw.mean(0), 3))
+        for c in np.unique(gy):
+            print('  class %d:' % c, np.round(gw[gy == c].mean(0), 3))
+        print('Learned fuzzy sets and rule base:')
+        print(model.fuzzy_gate.describe())
+    result = {'test_f1_max_over_epochs': max(all_fscore), 'test_f1_last_epoch': all_fscore[-1],
+              'test_acc_last_epoch': all_acc[-1], 'best_valid_f1': best_valid,
+              'test_f1_at_best_valid': test_at_best_valid[0], 'test_acc_at_best_valid': test_at_best_valid[1],
+              'best_valid_epoch': test_at_best_valid[2], 'n_features': [D_eeg, D_audio, D_visual]}
+    print('RESULT ' + json.dumps(result))
 
     if not args.testing: 
         print('Test performance..')

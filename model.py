@@ -7,6 +7,7 @@ from torch_geometric.nn import  GraphConv
 import numpy as np, itertools, random, copy, math
 from GCN import GCN_2Layers, GCNLayer1, GCNII, TextCNN
 from HyperGCN import HyperGCN
+from softcomputing import FuzzyModalityGate
 
 def print_grad(grad):
     print('the grad is', grad[2][0:5])
@@ -541,7 +542,7 @@ class Model(nn.Module):
                  n_classes=7, listener_state=False, context_attention='simple', dropout_rec=0.5, dropout=0.5, nodal_attention=True, avec=False, 
                  no_cuda=False, graph_type='relation', use_topic=False, alpha=0.2, multiheads=6, graph_construct='direct', use_GCN=False,use_residue=True,
                  dynamic_edge_w=False,D_m_v=512,D_m_a=100,modals='avl',att_type='gated',av_using_lstm=False,Deep_GCN_nlayers = 64, dataset='IEMOCAP',
-                 use_speaker=True, use_modal=False, norm='LN2', num_L = 3, num_K = 4):
+                 use_speaker=True, use_modal=False, norm='LN2', num_L = 3, num_K = 4, fuzzy_gate=False):
         
         super(Model, self).__init__()
 
@@ -562,15 +563,15 @@ class Model(nn.Module):
         self.use_speaker = use_speaker
         self.use_modal = use_modal
         self.att_type = att_type
-        self.normBNa = nn.BatchNorm1d(1024, affine=True)
-        self.normBNb = nn.BatchNorm1d(1024, affine=True)
-        self.normBNc = nn.BatchNorm1d(1024, affine=True)
-        self.normBNd = nn.BatchNorm1d(1024, affine=True)
+        self.normBNa = nn.BatchNorm1d(D_m, affine=True)
+        self.normBNb = nn.BatchNorm1d(D_m, affine=True)
+        self.normBNc = nn.BatchNorm1d(D_m, affine=True)
+        self.normBNd = nn.BatchNorm1d(D_m, affine=True)
 
-        self.normLNa = nn.LayerNorm(1024, elementwise_affine=True)
-        self.normLNb = nn.LayerNorm(1024, elementwise_affine=True)
-        self.normLNc = nn.LayerNorm(1024, elementwise_affine=True)
-        self.normLNd = nn.LayerNorm(1024, elementwise_affine=True)
+        self.normLNa = nn.LayerNorm(D_m, elementwise_affine=True)
+        self.normLNb = nn.LayerNorm(D_m, elementwise_affine=True)
+        self.normLNc = nn.LayerNorm(D_m, elementwise_affine=True)
+        self.normLNd = nn.LayerNorm(D_m, elementwise_affine=True)
         self.norm_strategy = norm
         if self.att_type == 'gated' or self.att_type == 'concat_subsequently' or self.att_type == 'concat_DHT' or self.att_type == 'concat_EAV':
             self.multi_modal = True
@@ -579,6 +580,10 @@ class Model(nn.Module):
             self.multi_modal = False
         self.use_bert_seq = False
         self.dataset = dataset
+        # soft computing: fuzzy (TSK) modality-reliability gate, applied before hypergraph fusion
+        self.fuzzy_gate = None
+        if fuzzy_gate and self.multi_modal and sorted(self.modals) == ['a', 'l', 'v']:
+            self.fuzzy_gate = FuzzyModalityGate(D_g, n_classes, n_mod=3, mod_names=("EEG", "AUDIO", "VIDEO"))
 
         if self.base_model == 'LSTM':
             if not self.multi_modal:
@@ -866,6 +871,8 @@ class Model(nn.Module):
                 emotions_feat = nn.ReLU()(emotions_feat)
                 log_prob = F.log_softmax(self.hidfc(self.smax_fc(emotions_feat)), 1)
         elif self.graph_type=='hyper':
+            if self.fuzzy_gate is not None:
+                features_l, features_a, features_v = self.fuzzy_gate([features_l, features_a, features_v])
             emotions_feat = self.graph_model(features_a, features_v, features_l, seq_lengths, qmask, epoch)
             emotions_feat = self.dropout_(emotions_feat)
             emotions_feat = nn.ReLU()(emotions_feat)

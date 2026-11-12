@@ -5,17 +5,21 @@ from torch import Tensor
 from torch.autograd import Variable
 from torch.nn.utils.rnn import pad_sequence
 from torch_geometric.nn import RGCNConv, GraphConv, FAConv
-from torch_scatter import scatter_add
+import torch_geometric
+_PYG2 = int(torch_geometric.__version__.split('.')[0]) >= 2  # `size` convention of propagate() changed in PyG 2.x
+try:
+    from torch_scatter import scatter_add
+except ImportError:  # modern PyG without torch_scatter
+    from torch_geometric.utils import scatter as _pyg_scatter
+    def scatter_add(src, index, dim=0, dim_size=None):
+        return _pyg_scatter(src, index, dim=dim, dim_size=dim_size, reduce='sum')
 from torch.nn import Parameter
 from typing import Optional
 import numpy as np, itertools, random, copy, math
 import math
 import scipy.sparse as sp
-from model_GCN import GCNII_lyc
-import ipdb
 from torch_geometric.nn import GCNConv
 from itertools import permutations
-from torch_geometric.nn.pool.topk_pool import topk
 from torch_geometric.nn import MessagePassing
 from torch_geometric.nn.conv import MessagePassing
 from torch_geometric.nn import global_mean_pool as gap, global_max_pool as gmp, global_add_pool as gsp
@@ -80,7 +84,7 @@ class PositionalEncoding(nn.Module):
         """
         x: Tensor, shape [seq_len, batch_size, embedding_dim]
         """
-        tmpx = torch.zeros(0).cuda()
+        tmpx = torch.zeros(0).to(x.device)
         tmp = 0
         for i in dia_len:
             a = x[tmp:tmp+i].unsqueeze(1)
@@ -144,7 +148,7 @@ class HyperGCN(nn.Module):
             if 'v' in self.modals:
                 v = self.v_pos(v, dia_len)
         if self.use_modal:  
-            emb_idx = torch.LongTensor([0, 1, 2]).cuda()
+            emb_idx = torch.LongTensor([0, 1, 2]).to(a.device)
             emb_vector = self.modal_embeddings(emb_idx)
 
             if 'a' in self.modals:
@@ -184,6 +188,7 @@ class HyperGCN(nn.Module):
 
 
     def create_hyper_index(self, a, v, l, dia_len, modals):
+        dev = l.device
         self_loop = False
         num_modality = len(modals)
         node_count = 0
@@ -193,8 +198,8 @@ class HyperGCN(nn.Module):
         index2 =[]
         tmp = []
         batch = []
-        edge_type = torch.zeros(0).cuda()
-        in_index0 = torch.zeros(0).cuda()
+        edge_type = torch.zeros(0).to(dev)
+        in_index0 = torch.zeros(0).to(dev)
         hyperedge_type1 = []
         for i in dia_len:
             nodes = list(range(i*num_modality))
@@ -242,18 +247,18 @@ class HyperGCN(nn.Module):
 
         index1 = torch.LongTensor(index1).view(1,-1)
         index2 = torch.LongTensor(index2).view(1,-1)
-        hyperedge_index = torch.cat([index1,index2],dim=0).cuda() 
+        hyperedge_index = torch.cat([index1,index2],dim=0).to(dev) 
         if self_loop:
             max_edge = hyperedge_index[1].max()
             max_node = hyperedge_index[0].max()
             loops = torch.cat([torch.arange(0,max_node+1,1).repeat_interleave(2).view(1,-1),
-                            torch.arange(max_edge+1,max_edge+1+max_node+1,1).repeat_interleave(2).view(1,-1)],dim=0).cuda()
+                            torch.arange(max_edge+1,max_edge+1+max_node+1,1).repeat_interleave(2).view(1,-1)],dim=0).to(dev)
             hyperedge_index = torch.cat([hyperedge_index, loops], dim=1)
 
-        edge_index = torch.LongTensor(tmp).T.cuda()
-        batch = torch.LongTensor(batch).cuda()
+        edge_index = torch.LongTensor(tmp).T.to(dev)
+        batch = torch.LongTensor(batch).to(dev)
 
-        hyperedge_type1 = torch.LongTensor(hyperedge_type1).view(-1,1).cuda()
+        hyperedge_type1 = torch.LongTensor(hyperedge_type1).view(-1,1).to(dev)
 
         return hyperedge_index, edge_index, features, batch, hyperedge_type1
 
@@ -277,6 +282,7 @@ class HyperGCN(nn.Module):
 
 
     def create_gnn_index(self, a, v, l, dia_len, modals):
+        dev = l.device
         self_loop = False
         num_modality = len(modals)
         node_count = 0
@@ -310,7 +316,7 @@ class HyperGCN(nn.Module):
                 features =  torch.cat([features,features_temp],dim=0)
                 temp = temp+i
             node_count = node_count + i*num_modality
-        edge_index = torch.cat([torch.LongTensor(index).T,torch.LongTensor(tmp).T],1).cuda()
+        edge_index = torch.cat([torch.LongTensor(index).T,torch.LongTensor(tmp).T],1).to(dev)
 
         return edge_index, features
 
@@ -472,7 +478,7 @@ class HypergraphConv(MessagePassing):
                              size=(num_nodes, num_edges))                   #num_edges,1,100
         self.flow = 'target_to_source'
         out = self.propagate(hyperedge_index, x=out, norm=D, alpha=alpha,
-                             size=(num_edges, num_nodes))                   #num_nodes,1,100
+                             size=(num_nodes, num_edges) if _PYG2 else (num_edges, num_nodes))                   #num_nodes,1,100
         if self.concat is True and out.size(1) == 1:
             out = out.view(-1, self.heads * self.out_channels)
         else:

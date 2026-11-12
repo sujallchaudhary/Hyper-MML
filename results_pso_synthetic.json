@@ -1,0 +1,31 @@
+{
+  "best_config": {
+    "lr": 0.00036320861770110165,
+    "l2": 2.593705902350642e-05,
+    "dropout": 0.586,
+    "num_L": 2,
+    "rs_sigma": 3.545,
+    "rs_max_features": 24,
+    "aux_weight": 0.897
+  },
+  "best_valid_f1": 87.13,
+  "history": [
+    86.62,
+    87.13,
+    87.13
+  ],
+  "final_run": {
+    "test_f1_max_over_epochs": 97.5,
+    "test_f1_last_epoch": 97.5,
+    "test_acc_last_epoch": 97.5,
+    "best_valid_f1": 87.13,
+    "test_f1_at_best_valid": 96.65,
+    "test_acc_at_best_valid": 96.67,
+    "best_valid_epoch": 14,
+    "n_features": [
+      24,
+      24,
+      24
+    ]
+  }
+}
