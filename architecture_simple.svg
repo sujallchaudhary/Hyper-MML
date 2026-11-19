@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1250" height="1250" viewBox="-125 0 1250 1250" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arr" markerWidth="12" markerHeight="12" refX="6" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#555"/>
+    </marker>
+  </defs>
+  <rect x="-125" width="1250" height="1250" fill="#FFFBF0"/>
+  <text x="500" y="55" font-size="36" font-weight="bold" text-anchor="middle" fill="#333">How Hyper-MML Guesses Feelings</text>
+  <text x="500" y="88" font-size="20" text-anchor="middle" fill="#777">A robot that listens, watches and reads brain waves</text>
+
+  <!-- Inputs -->
+  <g font-size="22" font-weight="bold" text-anchor="middle" fill="#fff">
+    <rect x="60" y="120" width="260" height="110" rx="20" fill="#9B6BD6"/>
+    <text x="190" y="165" font-size="44">🧠</text>
+    <text x="190" y="208">Brain waves (EEG)</text>
+    <rect x="370" y="120" width="260" height="110" rx="20" fill="#F29B38"/>
+    <text x="500" y="165" font-size="44">🔊</text>
+    <text x="500" y="208">Voice (Audio)</text>
+    <rect x="680" y="120" width="260" height="110" rx="20" fill="#3BA7D9"/>
+    <text x="810" y="165" font-size="44">🎥</text>
+    <text x="810" y="208">Face (Video)</text>
+  </g>
+
+  <g stroke="#555" stroke-width="4" marker-end="url(#arr)">
+    <line x1="190" y1="232" x2="190" y2="300"/>
+    <line x1="500" y1="232" x2="500" y2="300"/>
+    <line x1="810" y1="232" x2="810" y2="300"/>
+  </g>
+
+  <!-- Step boxes -->
+  <g text-anchor="middle">
+    <rect x="60" y="305" width="880" height="140" rx="24" fill="#E3F6E3" stroke="#5DB85D" stroke-width="4"/>
+    <text x="500" y="350" font-size="28" font-weight="bold" fill="#2E7D32">① Clean up 🧹</text>
+    <text x="500" y="388" font-size="22" fill="#333">Keep only the useful clues and throw away the junk.</text>
+    <text x="500" y="418" font-size="18" fill="#777">(Rough-set feature selection)</text>
+
+    <line x1="500" y1="447" x2="500" y2="500" stroke="#555" stroke-width="4" marker-end="url(#arr)"/>
+
+    <rect x="60" y="505" width="880" height="140" rx="24" fill="#E6F0FF" stroke="#4A86E8" stroke-width="4"/>
+    <text x="500" y="550" font-size="28" font-weight="bold" fill="#1F5FBF">② Understand each clue 🔍</text>
+    <text x="500" y="588" font-size="22" fill="#333">Turn each signal into a short summary.</text>
+    <text x="500" y="618" font-size="18" fill="#777">(Brain encoder ABEMA + audio / video encoders)</text>
+
+    <line x1="500" y1="647" x2="500" y2="700" stroke="#555" stroke-width="4" marker-end="url(#arr)"/>
+
+    <rect x="60" y="705" width="880" height="140" rx="24" fill="#FFF0D6" stroke="#F29B38" stroke-width="4"/>
+    <text x="500" y="750" font-size="28" font-weight="bold" fill="#C77700">③ Who do we trust? ⚖️</text>
+    <text x="500" y="788" font-size="22" fill="#333">Clear voice? Blurry face? Trust good clues more, shaky ones less.</text>
+    <text x="500" y="818" font-size="18" fill="#777">(Fuzzy gate)</text>
+
+    <line x1="500" y1="847" x2="500" y2="900" stroke="#555" stroke-width="4" marker-end="url(#arr)"/>
+
+    <rect x="60" y="905" width="880" height="140" rx="24" fill="#F3E6FF" stroke="#9B6BD6" stroke-width="4"/>
+    <text x="500" y="950" font-size="28" font-weight="bold" fill="#6A3FA8">④ Team huddle 🤝</text>
+    <text x="500" y="988" font-size="22" fill="#333">Brain, voice and face talk together and agree on one picture.</text>
+    <text x="500" y="1018" font-size="18" fill="#777">(Hypergraph fusion, AHFM)</text>
+
+    <line x1="500" y1="1047" x2="500" y2="1090" stroke="#555" stroke-width="4" marker-end="url(#arr)"/>
+  </g>
+
+  <!-- Output -->
+  <rect x="60" y="1095" width="880" height="120" rx="24" fill="#FFE3E3" stroke="#E25555" stroke-width="4"/>
+  <text x="500" y="1138" font-size="28" font-weight="bold" text-anchor="middle" fill="#B71C1C">⑤ Guess the feeling</text>
+  <text x="500" y="1190" font-size="40" text-anchor="middle">😀 Happy    😢 Sad    😠 Angry    😐 Neutral</text>
+</svg>

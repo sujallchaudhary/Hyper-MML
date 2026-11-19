@@ -1,0 +1,154 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="2620" viewBox="0 0 1400 2620" font-family="Helvetica, Arial, sans-serif" fill="#000">
+<defs><marker id="arr" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L10,5 L0,10 z" fill="#000"/></marker></defs>
+<rect width="1400" height="2620" fill="#fff"/>
+<text x="700.0" y="57.8" font-size="28" font-weight="bold" text-anchor="middle">Hyper-MML: Multi-Modal Emotion Recognition in Conversation</text>
+<text x="700.0" y="83.2" font-size="15" font-weight="normal" text-anchor="middle">System architecture flow chart  (EEG + audio + video  -&gt;  hypergraph fusion  -&gt;  emotion class)</text>
+<polygon points="122.0,110 460.0,110 438.0,180 100.0,180" fill="#fff" stroke="#000" stroke-width="1.6"/>
+<text x="280.0" y="140.2" font-size="15" font-weight="bold" text-anchor="middle">EEG features</text>
+<text x="280.0" y="160.2" font-size="15" font-weight="normal" text-anchor="middle">4 streams r1 - r4</text>
+<polygon points="542.0,110 880.0,110 858.0,180 520.0,180" fill="#fff" stroke="#000" stroke-width="1.6"/>
+<text x="700.0" y="140.2" font-size="15" font-weight="bold" text-anchor="middle">Audio features</text>
+<text x="700.0" y="160.2" font-size="15" font-weight="normal" text-anchor="middle">per utterance</text>
+<polygon points="962.0,110 1300.0,110 1278.0,180 940.0,180" fill="#fff" stroke="#000" stroke-width="1.6"/>
+<text x="1120.0" y="140.2" font-size="15" font-weight="bold" text-anchor="middle">Video features</text>
+<text x="1120.0" y="160.2" font-size="15" font-weight="normal" text-anchor="middle">per utterance</text>
+<polyline points="280,180 280,230" fill="none" stroke="#000" stroke-width="1.6" marker-end="url(#arr)"/>
+<rect x="100.0" y="230" width="360" height="86" rx="0" fill="#fff" stroke="#000" stroke-width="1.6" stroke-dasharray="9,5"/>
+<text x="280.0" y="258.2" font-size="15" font-weight="bold" text-anchor="middle">Fuzzy-rough feature selection</text>
+<text x="280.0" y="278.2" font-size="15" font-weight="normal" text-anchor="middle">QuickReduct or GA reduct per modality,</text>
+<text x="280.0" y="298.2" font-size="15" font-weight="normal" text-anchor="middle">fitted on training split only</text>
+<polyline points="280,316 280,360" fill="none" stroke="#000" stroke-width="1.6" marker-end="url(#arr)"/>
+<polyline points="700,180 700,230" fill="none" stroke="#000" stroke-width="1.6" marker-end="url(#arr)"/>
+<rect x="520.0" y="230" width="360" height="86" rx="0" fill="#fff" stroke="#000" stroke-width="1.6" stroke-dasharray="9,5"/>
+<text x="700.0" y="258.2" font-size="15" font-weight="bold" text-anchor="middle">Fuzzy-rough feature selection</text>
+<text x="700.0" y="278.2" font-size="15" font-weight="normal" text-anchor="middle">QuickReduct or GA reduct per modality,</text>
+<text x="700.0" y="298.2" font-size="15" font-weight="normal" text-anchor="middle">fitted on training split only</text>
+<polyline points="700,316 700,360" fill="none" stroke="#000" stroke-width="1.6" marker-end="url(#arr)"/>
+<polyline points="1120,180 1120,230" fill="none" stroke="#000" stroke-width="1.6" marker-end="url(#arr)"/>
+<rect x="940.0" y="230" width="360" height="86" rx="0" fill="#fff" stroke="#000" stroke-width="1.6" stroke-dasharray="9,5"/>
+<text x="1120.0" y="258.2" font-size="15" font-weight="bold" text-anchor="middle">Fuzzy-rough feature selection</text>
+<text x="1120.0" y="278.2" font-size="15" font-weight="normal" text-anchor="middle">QuickReduct or GA reduct per modality,</text>
+<text x="1120.0" y="298.2" font-size="15" font-weight="normal" text-anchor="middle">fitted on training split only</text>
+<polyline points="1120,316 1120,360" fill="none" stroke="#000" stroke-width="1.6" marker-end="url(#arr)"/>
+<rect x="100.0" y="360" width="360" height="70" rx="0" fill="#fff" stroke="#000" stroke-width="1.6"/>
+<text x="280.0" y="390.2" font-size="15" font-weight="bold" text-anchor="middle">Normalise streams (BN / LN)</text>
+<text x="280.0" y="410.2" font-size="15" font-weight="normal" text-anchor="middle">and average r1 - r4</text>
+<rect x="520.0" y="360" width="360" height="70" rx="0" fill="#fff" stroke="#000" stroke-width="1.6"/>
+<text x="700.0" y="390.2" font-size="15" font-weight="bold" text-anchor="middle">Linear projection</text>
+<text x="700.0" y="410.2" font-size="15" font-weight="normal" text-anchor="middle">to D_g</text>
+<rect x="940.0" y="360" width="360" height="70" rx="0" fill="#fff" stroke="#000" stroke-width="1.6"/>
+<text x="1120.0" y="390.2" font-size="15" font-weight="bold" text-anchor="middle">Linear projection</text>
+<text x="1120.0" y="410.2" font-size="15" font-weight="normal" text-anchor="middle">to D_g</text>
+<polyline points="280,430 280,470" fill="none" stroke="#000" stroke-width="1.6" marker-end="url(#arr)"/>
+<polyline points="700,430 700,470" fill="none" stroke="#000" stroke-width="1.6" marker-end="url(#arr)"/>
+<polyline points="1120,430 1120,470" fill="none" stroke="#000" stroke-width="1.6" marker-end="url(#arr)"/>
+<rect x="100.0" y="470" width="360" height="70" rx="0" fill="#fff" stroke="#000" stroke-width="1.6"/>
+<text x="280.0" y="500.2" font-size="15" font-weight="bold" text-anchor="middle">Linear projection</text>
+<text x="280.0" y="520.2" font-size="15" font-weight="normal" text-anchor="middle">to D_g</text>
+<rect x="520.0" y="470" width="360" height="70" rx="0" fill="#fff" stroke="#000" stroke-width="1.6" stroke-dasharray="9,5"/>
+<text x="700.0" y="500.2" font-size="15" font-weight="bold" text-anchor="middle">Bidirectional GRU</text>
+<text x="700.0" y="520.2" font-size="15" font-weight="normal" text-anchor="middle">(optional, --av_using_lstm)</text>
+<rect x="940.0" y="470" width="360" height="70" rx="0" fill="#fff" stroke="#000" stroke-width="1.6" stroke-dasharray="9,5"/>
+<text x="1120.0" y="500.2" font-size="15" font-weight="bold" text-anchor="middle">Bidirectional GRU</text>
+<text x="1120.0" y="520.2" font-size="15" font-weight="normal" text-anchor="middle">(optional, --av_using_lstm)</text>
+<polyline points="280,540 280,580" fill="none" stroke="#000" stroke-width="1.6" marker-end="url(#arr)"/>
+<rect x="100.0" y="580" width="360" height="70" rx="0" fill="#fff" stroke="#000" stroke-width="1.6"/>
+<text x="280.0" y="610.2" font-size="15" font-weight="bold" text-anchor="middle">Bidirectional GRU</text>
+<text x="280.0" y="630.2" font-size="15" font-weight="normal" text-anchor="middle">(context across utterances)</text>
+<polyline points="280,650 280,720" fill="none" stroke="#000" stroke-width="1.6" marker-end="url(#arr)"/>
+<polyline points="700,540 700,720" fill="none" stroke="#000" stroke-width="1.6" marker-end="url(#arr)"/>
+<polyline points="1120,540 1120,720" fill="none" stroke="#000" stroke-width="1.6" marker-end="url(#arr)"/>
+<rect x="100" y="720" width="1200" height="124" rx="0" fill="#fff" stroke="#000" stroke-width="1.6" stroke-dasharray="9,5"/>
+<text x="700.0" y="757.2" font-size="15" font-weight="bold" text-anchor="middle">Fuzzy TSK modality-reliability gate   (optional, --fuzzy_gate)</text>
+<text x="700.0" y="777.2" font-size="15" font-weight="normal" text-anchor="middle">Per modality: auxiliary classifier -&gt; certainty = 1 - normalised entropy;  agreement = cosine(modality, mean of other modalities)</text>
+<text x="700.0" y="797.2" font-size="15" font-weight="normal" text-anchor="middle">9 IF-THEN rules (3 x 3 Gaussian memberships, product t-norm) -&gt; trust weight w per modality</text>
+<text x="700.0" y="817.2" font-size="15" font-weight="normal" text-anchor="middle">Output: each modality's features multiplied by its trust weight w</text>
+<polyline points="700,844 700,884" fill="none" stroke="#000" stroke-width="1.6" marker-end="url(#arr)"/>
+<rect x="300" y="884" width="800" height="64" rx="0" fill="#fff" stroke="#000" stroke-width="1.6"/>
+<text x="700.0" y="911.2" font-size="15" font-weight="bold" text-anchor="middle">Add speaker embedding (--use_speaker)</text>
+<text x="700.0" y="931.2" font-size="15" font-weight="normal" text-anchor="middle">Project node features with a linear layer: D_g -&gt; hidden size</text>
+<polyline points="700,948 700,988" fill="none" stroke="#000" stroke-width="1.6" marker-end="url(#arr)"/>
+<rect x="250" y="988" width="900" height="104" rx="0" fill="#fff" stroke="#000" stroke-width="1.6"/>
+<text x="700.0" y="1015.2" font-size="15" font-weight="bold" text-anchor="middle">Build hypergraph  (adaptive hypergraph fusion, AHFM)</text>
+<text x="700.0" y="1035.2" font-size="15" font-weight="normal" text-anchor="middle">Nodes: one per utterance and modality  (3N nodes for N utterances)</text>
+<text x="700.0" y="1055.2" font-size="15" font-weight="normal" text-anchor="middle">Hyperedges: 3 modality edges (all utterances of one modality)</text>
+<text x="700.0" y="1075.2" font-size="15" font-weight="normal" text-anchor="middle">+ N utterance edges (EEG, audio, video of the same utterance)</text>
+<polyline points="420,1092 420,1140" fill="none" stroke="#000" stroke-width="1.6" marker-end="url(#arr)"/>
+<polyline points="1000,1092 1000,1140" fill="none" stroke="#000" stroke-width="1.6" marker-end="url(#arr)"/>
+<rect x="150" y="1140" width="540" height="100" rx="0" fill="#fff" stroke="#000" stroke-width="1.6"/>
+<text x="420.0" y="1175.2" font-size="15" font-weight="bold" text-anchor="middle">Hypergraph convolution x L layers</text>
+<text x="420.0" y="1195.2" font-size="15" font-weight="normal" text-anchor="middle">(L = num_L, default 3)</text>
+<text x="420.0" y="1215.2" font-size="15" font-weight="normal" text-anchor="middle">learnable hyperedge weights and edge-type attributes</text>
+<rect x="730" y="1140" width="540" height="100" rx="0" fill="#fff" stroke="#000" stroke-width="1.6" stroke-dasharray="9,5"/>
+<text x="1000.0" y="1175.2" font-size="15" font-weight="bold" text-anchor="middle">Pairwise graph convolution x K layers</text>
+<text x="1000.0" y="1195.2" font-size="15" font-weight="normal" text-anchor="middle">(K = num_K, default 0), residual sum</text>
+<text x="1000.0" y="1215.2" font-size="15" font-weight="normal" text-anchor="middle">within-modality and within-utterance edges</text>
+<polyline points="420,1240 420,1296" fill="none" stroke="#000" stroke-width="1.6" marker-end="url(#arr)"/>
+<polyline points="1000,1240 1000,1296" fill="none" stroke="#000" stroke-width="1.6" marker-end="url(#arr)"/>
+<rect x="250" y="1296" width="900" height="80" rx="0" fill="#fff" stroke="#000" stroke-width="1.6"/>
+<text x="700.0" y="1331.2" font-size="15" font-weight="bold" text-anchor="middle">Concatenate  [ input features  ||  hypergraph output  ||  graph output ]</text>
+<text x="700.0" y="1351.2" font-size="15" font-weight="normal" text-anchor="middle">Regroup per utterance as  [ EEG || audio || video ]</text>
+<polyline points="700,1376 700,1416" fill="none" stroke="#000" stroke-width="1.6" marker-end="url(#arr)"/>
+<rect x="400" y="1416" width="600" height="64" rx="0" fill="#fff" stroke="#000" stroke-width="1.6"/>
+<text x="700.0" y="1453.2" font-size="15" font-weight="bold" text-anchor="middle">Dropout  -&gt;  ReLU  -&gt;  Linear classifier</text>
+<polyline points="700,1480 700,1520" fill="none" stroke="#000" stroke-width="1.6" marker-end="url(#arr)"/>
+<rect x="400" y="1520" width="600" height="64" rx="0" fill="#fff" stroke="#000" stroke-width="1.6"/>
+<text x="700.0" y="1547.2" font-size="15" font-weight="bold" text-anchor="middle">Log-Softmax</text>
+<text x="700.0" y="1567.2" font-size="15" font-weight="normal" text-anchor="middle">class probabilities for each utterance</text>
+<polyline points="700,1584 700,1624" fill="none" stroke="#000" stroke-width="1.6" marker-end="url(#arr)"/>
+<polygon points="512,1624 910,1624 888,1694 490,1694" fill="#fff" stroke="#000" stroke-width="1.6"/>
+<text x="700.0" y="1654.2" font-size="15" font-weight="bold" text-anchor="middle">Predicted emotion class</text>
+<text x="700.0" y="1674.2" font-size="15" font-weight="normal" text-anchor="middle">for each utterance</text>
+<rect x="60" y="1750" width="1280" height="700" fill="none" stroke="#000" stroke-width="1"/>
+<text x="84" y="1783.6" font-size="16" font-weight="bold" text-anchor="start">TRAINING AND HYPER-PARAMETER OPTIMISATION</text>
+<polyline points="700,1694 700,1810 450,1810 450,1840" fill="none" stroke="#000" stroke-width="1.6" marker-end="url(#arr)"/>
+<text x="712" y="1764.5" font-size="13" font-weight="normal" text-anchor="start">log-probabilities</text>
+<rect x="130" y="1840" width="640" height="100" rx="0" fill="#fff" stroke="#000" stroke-width="1.6"/>
+<text x="450.0" y="1875.2" font-size="15" font-weight="bold" text-anchor="middle">Loss: class-weighted NLL against true labels</text>
+<text x="450.0" y="1895.2" font-size="15" font-weight="normal" text-anchor="middle">x optional rough boundary-region sample weights (--rs_weight)</text>
+<text x="450.0" y="1915.2" font-size="15" font-weight="normal" text-anchor="middle">+ aux_weight x auxiliary modality-head loss (fuzzy gate)</text>
+<polyline points="450,1940 450,1980" fill="none" stroke="#000" stroke-width="1.6" marker-end="url(#arr)"/>
+<rect x="130" y="1980" width="640" height="64" rx="0" fill="#fff" stroke="#000" stroke-width="1.6"/>
+<text x="450.0" y="2007.2" font-size="15" font-weight="bold" text-anchor="middle">Backpropagation</text>
+<text x="450.0" y="2027.2" font-size="15" font-weight="normal" text-anchor="middle">Adam optimiser (learning rate, L2 weight decay)</text>
+<polyline points="450,2044 450,2084" fill="none" stroke="#000" stroke-width="1.6" marker-end="url(#arr)"/>
+<rect x="130" y="2084" width="640" height="70" rx="0" fill="#fff" stroke="#000" stroke-width="1.6"/>
+<text x="450.0" y="2114.2" font-size="15" font-weight="bold" text-anchor="middle">Evaluate every epoch</text>
+<text x="450.0" y="2134.2" font-size="15" font-weight="normal" text-anchor="middle">weighted F1 on validation split and on test split</text>
+<polyline points="450,2154 450,2184" fill="none" stroke="#000" stroke-width="1.6" marker-end="url(#arr)"/>
+<polygon points="450,2186 600,2244 450,2302 300,2244" fill="#fff" stroke="#000" stroke-width="1.6"/>
+<text x="450" y="2249.2" font-size="15" font-weight="bold" text-anchor="middle">More epochs?</text>
+<polyline points="300,2244 90,2244 90,1890 130,1890" fill="none" stroke="#000" stroke-width="1.6" marker-end="url(#arr)"/>
+<text x="100" y="2234.6" font-size="13" font-weight="normal" text-anchor="start">Yes: next epoch</text>
+<polyline points="450,2302 450,2346" fill="none" stroke="#000" stroke-width="1.6" marker-end="url(#arr)"/>
+<text x="462" y="2332.6" font-size="13" font-weight="normal" text-anchor="start">No</text>
+<rect x="130" y="2346" width="640" height="70" rx="35.0" fill="#fff" stroke="#000" stroke-width="1.6"/>
+<text x="450.0" y="2376.2" font-size="15" font-weight="bold" text-anchor="middle">Keep epoch with best validation F1</text>
+<text x="450.0" y="2396.2" font-size="15" font-weight="normal" text-anchor="middle">report its test F1</text>
+<rect x="950" y="1840" width="340" height="170" rx="0" fill="#fff" stroke="#000" stroke-width="1.6" stroke-dasharray="9,5"/>
+<text x="1120.0" y="1870.2" font-size="15" font-weight="bold" text-anchor="middle">Particle Swarm Optimisation</text>
+<text x="1120.0" y="1890.2" font-size="15" font-weight="normal" text-anchor="middle">tune_pso.py / modal_app.py</text>
+<text x="1120.0" y="1910.2" font-size="15" font-weight="normal" text-anchor="middle">Particle = lr, L2, dropout,</text>
+<text x="1120.0" y="1930.2" font-size="15" font-weight="normal" text-anchor="middle">#hypergraph layers, rough-set sigma,</text>
+<text x="1120.0" y="1950.2" font-size="15" font-weight="normal" text-anchor="middle">reduct size, aux weight</text>
+<text x="1120.0" y="1970.2" font-size="15" font-weight="normal" text-anchor="middle">Fitness = validation F1</text>
+<text x="1120.0" y="1990.2" font-size="15" font-weight="normal" text-anchor="middle">Repeat for a fixed budget; keep best</text>
+<polyline points="950,1890 770,1890" fill="none" stroke="#000" stroke-width="1.6" marker-end="url(#arr)"/>
+<text x="860" y="1882.5" font-size="13" font-weight="normal" text-anchor="middle">candidate</text>
+<text x="860" y="1913.5" font-size="13" font-weight="normal" text-anchor="middle">settings</text>
+<polyline points="770,2119 1120,2119 1120,2010" fill="none" stroke="#000" stroke-width="1.6" marker-end="url(#arr)"/>
+<text x="800" y="2109.6" font-size="13" font-weight="normal" text-anchor="start">fitness: validation F1</text>
+<text x="84" y="2494.9" font-size="14" font-weight="bold" text-anchor="start">LEGEND</text>
+<polygon points="98,2506 204,2506 190,2546 84,2546" fill="#fff" stroke="#000" stroke-width="1.6"/>
+<text x="144.0" y="2531.2" font-size="15" font-weight="bold" text-anchor="middle">Input / output</text>
+<rect x="240" y="2506" width="120" height="40" rx="0" fill="#fff" stroke="#000" stroke-width="1.6"/>
+<text x="300.0" y="2531.2" font-size="15" font-weight="bold" text-anchor="middle">Process</text>
+<rect x="396" y="2506" width="190" height="40" rx="0" fill="#fff" stroke="#000" stroke-width="1.6" stroke-dasharray="9,5"/>
+<text x="491.0" y="2531.2" font-size="15" font-weight="bold" text-anchor="middle">Optional module</text>
+<polygon points="690,2502 760,2526 690,2550 620,2526" fill="#fff" stroke="#000" stroke-width="1.6"/>
+<text x="690" y="2531.2" font-size="15" font-weight="bold" text-anchor="middle"></text>
+<text x="790" y="2531.2" font-size="15" font-weight="normal" text-anchor="start">Decision</text>
+<rect x="900" y="2506" width="120" height="40" rx="20.0" fill="#fff" stroke="#000" stroke-width="1.6"/>
+<text x="960.0" y="2531.2" font-size="15" font-weight="bold" text-anchor="middle">Terminator</text>
+<text x="84" y="2584.9" font-size="14" font-weight="normal" text-anchor="start">N = utterances in a dialogue   |   D_g = feature width   |   L, K = hypergraph / graph layers   |   || = concatenation</text>
+</svg>
